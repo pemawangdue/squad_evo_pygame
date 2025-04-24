@@ -1,14 +1,14 @@
 # 🐔 Chicken War
 
-A fun, animated 2D shooter game made with **Pygame**. Take control of a flying chicken, shoot your enemies with eggs, and avoid their attacks!
+A fun, animated 2D shooter game made with **Pygame**. Take control of a flying player, shoot your enemies with chickens, and avoid their attacks!
 
 ---
 
 ## 🎮 About the Game
 
 **Chicken War** is a cartoon-style action game where you:
-- Control a chicken flying across the screen
-- Shoot projectile eggs at enemies
+- Control a player flying across the screen
+- Shoot projectile chickens at enemies
 - Avoid incoming mosquito stings (bullets)
 - Try to survive and defeat all enemies to win
 
@@ -20,7 +20,7 @@ A fun, animated 2D shooter game made with **Pygame**. Take control of a flying c
 - `↓` Move Down
 - `←` Move Left
 - `→` Move Right
-- `SPACE` Shoot Egg
+- `SPACE` Shoot chicken
 
 ---
 
