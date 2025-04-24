@@ -7,7 +7,7 @@ import random
 pygame.init()
 WIDTH, HEIGHT = 1200, 800
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Jetpack Chicken War")
+pygame.display.set_caption("Chicken War")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont('Arial', 28)
 
@@ -20,9 +20,10 @@ GAME_OVER = "game_over"
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (200, 0, 0)
+
 difficulty_settings = {
-    "Easy": {"enemy_speed": 2, "shoot_frequency": 60},
-    "Medium": {"enemy_speed": 4, "shoot_frequency": 30},
+    "Easy": {"enemy_speed": 2, "shoot_frequency": 60},  # enemy_speed: how fast enemies move
+    "Medium": {"enemy_speed": 4, "shoot_frequency": 30},  # shoot_frequency: how often they shoot bullets at the player
     "Hard": {"enemy_speed": 6, "shoot_frequency": 10},
 }
 
@@ -38,11 +39,10 @@ def load_image(name, width, height):
 
 
 # Load assets
-player_img = load_image("vinay-1.png", 60, 100)
-chicken_img = load_image("chicken.png", 40, 30)
-star_img = load_image("dizzy.png", 40, 40)  # Star image for fainting
 background_img = load_image("background.png", WIDTH, HEIGHT)
-heart_icon = load_image("heart.png", 30, 30)
+chicken_img = load_image("chicken.png", 40, 30)
+dizzy_img = load_image("dizzy.png", 40, 40)
+heart_img = load_image("heart.png", 30, 30)
 
 player_frames = [
     load_image("vinay-1.png", 60, 100),
@@ -51,7 +51,7 @@ player_frames = [
     load_image("vinay-4.png", 60, 100)
 ]
 
-mosquito_frames = [
+enemy_frames = [
     [load_image("pema-1.png", 70, 50), load_image("pema-2.png", 70, 50)],
     [load_image("praful-1.png", 70, 50), load_image("praful-2.png", 70, 50)],
     [load_image("shreya-1.png", 70, 50), load_image("shreya-2.png", 70, 50)],
@@ -69,6 +69,17 @@ def stop_music():
     pygame.mixer.music.stop()
 
 
+def draw_text(text, size, color, x, y, center=True):
+    font_obj = pygame.font.SysFont('Arial', size)
+    text_surf = font_obj.render(text, True, color)
+    text_rect = text_surf.get_rect()
+    if center:
+        text_rect.center = (x, y)
+    else:
+        text_rect.topleft = (x, y)
+    screen.blit(text_surf, text_rect)
+
+
 # Classes
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -77,13 +88,13 @@ class Player(pygame.sprite.Sprite):
         self.current_frame = 0
         self.animation_timer = 0
         self.image = self.frames[self.current_frame]
-        self.rect = self.image.get_rect(center=(WIDTH - 100, HEIGHT // 2))
+        self.rect = self.image.get_rect(center=(WIDTH - 100, HEIGHT // 2)) # first position of the player
         self.speed = 5
         self.health = 5
 
         # Shooting cooldown
         self.shoot_cooldown = 300
-        self.last_shot_time = pygame.time.get_ticks()
+        self.last_shot_time = pygame.time.get_ticks()  # returns the number of milliseconds (ms) that have passed since pygame.init()
 
     def update(self, keys):
         if keys[pygame.K_UP] and self.rect.top > 0:
@@ -145,7 +156,7 @@ class Chicken(pygame.sprite.Sprite):
             self.kill()
 
 
-class Mosquito(pygame.sprite.Sprite):
+class Enemy(pygame.sprite.Sprite):
     def __init__(self, frames, y_pos):
         super().__init__()
         self.frames = frames
@@ -153,7 +164,7 @@ class Mosquito(pygame.sprite.Sprite):
         self.animation_timer = 0
         self.image = self.frames[0]
         self.rect = self.image.get_rect(topleft=(50, y_pos))
-        self.health = 2  # now 2 hits to die
+        self.health = 2  # 2 hits to die
         self.fainted = False
         self.speed = 4
 
@@ -163,14 +174,14 @@ class Mosquito(pygame.sprite.Sprite):
         self.move_timer = 0
         self.change_direction_interval = random.randint(30, 90)  # frames
 
-        # Star blink
-        self.star_timer = 0
-        self.show_star = True
+        # fainting
+        self.dizzy_timer = 0
+        self.show_dizzy = True
 
     def update(self):
         # Animate
         self.animation_timer += 1
-        if self.animation_timer >= 10:
+        if self.animation_timer >= 5:
             self.animation_timer = 0
             self.current_frame = (self.current_frame + 1) % len(self.frames)
             self.image = self.frames[self.current_frame]
@@ -181,7 +192,7 @@ class Mosquito(pygame.sprite.Sprite):
         self.rect.y += int(self.dy * actual_speed)
         self.rect.x += int(self.dx * actual_speed)
 
-        # Bounce
+        # Bounce Off Edges
         if self.rect.top <= 0 or self.rect.bottom >= HEIGHT:
             self.dy *= -1
         if self.rect.left < 10 or self.rect.right > WIDTH // 2:
@@ -195,12 +206,12 @@ class Mosquito(pygame.sprite.Sprite):
             self.move_timer = 0
             self.change_direction_interval = random.randint(30, 90)
 
-        # Blink star if fainted
+        # Blink dizzy if fainted
         if self.fainted:
-            self.star_timer += 1
-            if self.star_timer >= 30:  # blink interval
-                self.star_timer = 0
-                self.show_star = not self.show_star
+            self.dizzy_timer += 1
+            if self.dizzy_timer >= 20:  # blink interval
+                self.dizzy_timer = 0
+                self.show_dizzy = not self.show_dizzy
 
     def shoot(self, player_rect):
         return EnemyBullet(self.rect.right, self.rect.centery, player_rect)
@@ -235,34 +246,22 @@ class EnemyBullet(pygame.sprite.Sprite):
             self.kill()
 
 
-# Text draw helper
-def draw_text(text, size, color, x, y, center=True):
-    font_obj = pygame.font.SysFont('Arial', size)
-    text_surf = font_obj.render(text, True, color)
-    text_rect = text_surf.get_rect()
-    if center:
-        text_rect.center = (x, y)
-    else:
-        text_rect.topleft = (x, y)
-    screen.blit(text_surf, text_rect)
-
-
 # Game loop
 def main():
     game_state = MENU
     score = 0
     start_time = 0
     result = ""
+    selected_difficulty = None  # Player's selection from the menu
+    shoot_timer = 0
+    shoot_frequency = 60
+    previous_state = None
 
     player = Player()
     player_group = pygame.sprite.Group(player)
     bullets = pygame.sprite.Group()
     enemy_bullets = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
-    selected_difficulty = None  # Player's selection from the menu
-    shoot_timer = 0
-    shoot_frequency = 60
-    previous_state = None
 
     while True:
         screen.blit(background_img, (0, 0))
@@ -277,7 +276,7 @@ def main():
                 return main()
 
         if game_state == MENU:
-            draw_text("Jetpack Chicken War", 48, BLACK, WIDTH // 2, HEIGHT // 4)
+            draw_text("Chicken War", 48, BLACK, WIDTH // 2, HEIGHT // 4)
             draw_text("Select Difficulty:", 36, BLACK, WIDTH // 2, HEIGHT // 2 - 60)
 
             mouse = pygame.mouse.get_pos()
@@ -304,9 +303,9 @@ def main():
                 if start_rect.collidepoint(mouse) and click[0]:
                     enemy_speed = difficulty_settings[selected_difficulty]["enemy_speed"]
                     shoot_frequency = difficulty_settings[selected_difficulty]["shoot_frequency"]
-                    for i, frames in enumerate(mosquito_frames):
-                        m = Mosquito(frames, 50 + i * 100)
-                        m.speed = enemy_speed  # add speed to the mosquito object
+                    for i, frames in enumerate(enemy_frames):
+                        m = Enemy(frames, 50 + i * 100)
+                        m.speed = enemy_speed  # add speed to the enemy object
                         enemies.add(m)
 
                     game_state = PLAYING
@@ -330,7 +329,7 @@ def main():
                     shooter = random.choice(enemies.sprites())
                     enemy_bullets.add(shooter.shoot(player.rect))
 
-            # Bullet collisions
+            # player chicken hit enemy
             for bullet in bullets:
                 hit = pygame.sprite.spritecollideany(bullet, enemies)
                 if hit:
@@ -363,13 +362,13 @@ def main():
             enemy_bullets.draw(screen)
             enemies.draw(screen)
 
-            # Draw fainting star if necessary
+            # Draw fainting dizzy if necessary
             for enemy in enemies:
-                if enemy.fainted and enemy.show_star:
-                    screen.blit(star_img, (enemy.rect.centerx - 10, enemy.rect.top - 20))
+                if enemy.fainted and enemy.show_dizzy:
+                    screen.blit(dizzy_img, (enemy.rect.centerx - 7, enemy.rect.top - 20))
 
             for i in range(player.health):
-                screen.blit(heart_icon, (10 + i * 35, 10))
+                screen.blit(heart_img, (10 + i * 35, 10))
             draw_text(f"Score: {score}", 24, BLACK, 10, 40, center=False)
 
         elif game_state == GAME_OVER:
@@ -385,7 +384,7 @@ def main():
                 play_music("game-over.mp3", False)
             previous_state = game_state
 
-        pygame.display.flip()
+        pygame.display.flip()  # ensures that the new image or drawing is actually rendered.
         clock.tick(60)
 
 
